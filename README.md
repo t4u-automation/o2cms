@@ -2,7 +2,9 @@
 
 A modern, multi-tenant headless content management system built with Next.js and Firebase. O2 CMS provides a Contentful-compatible API, making it easy to migrate from Contentful or integrate with existing Contentful-based frontends.
 
-## Demo
+## Live Demo
+
+Try O2 CMS now at **[https://o2cms.com](https://o2cms.com)**
 
 ![O2 CMS Demo](assets/demo.gif)
 
