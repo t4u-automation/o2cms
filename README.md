@@ -136,6 +136,8 @@ O2 CMS supports multi-locale content out of the box. When a new environment is c
 
 O2 CMS includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, allowing AI assistants like Cursor, Claude, and others to manage your content directly.
 
+![MCP Demo](assets/mcp-demo.gif)
+
 ### Setup
 
 1. **Deploy Cloud Functions** (if not already):
