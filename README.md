@@ -6,7 +6,7 @@ A modern, multi-tenant headless content management system built with Next.js and
 
 Try O2 CMS now at **[https://o2cms.com](https://o2cms.com)**
 
-![O2 CMS Demo](assets/demo.gif)
+https://github.com/user-attachments/assets/430f395a-f341-4657-bf1c-cf4081337459
 
 ## Features
 
@@ -136,7 +136,7 @@ O2 CMS supports multi-locale content out of the box. When a new environment is c
 
 O2 CMS includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, allowing AI assistants like Cursor, Claude, and others to manage your content directly.
 
-![MCP Demo](assets/mcp-demo.gif)
+https://github.com/user-attachments/assets/0936094b-965f-4d3f-bfe1-724c26af2d2a
 
 ### Setup
 
