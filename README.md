@@ -42,8 +42,8 @@ A modern, multi-tenant headless content management system built with Next.js and
 ### 1. Clone and install dependencies
 
 ```bash
-git clone https://github.com/nicksavdev/o2-cms.git
-cd o2-cms
+git clone https://github.com/t4u-automation/o2cms.git
+cd o2cms
 
 # Install frontend dependencies
 npm install
@@ -121,6 +121,14 @@ POST /graphql
 ```
 
 See the [API tests](api-tests/) for detailed usage examples.
+
+## Localization
+
+O2 CMS supports multi-locale content out of the box. When a new environment is created, locales are automatically copied from the master environment (defaults to `en-US` if no master locales exist). You can add additional locales per environment via **Settings > Locales**.
+
+## Hosting
+
+The frontend is deployed on [Vercel](https://vercel.com/). Cloud Functions are deployed separately via Firebase CLI. See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
 
 ## Contributing
 
