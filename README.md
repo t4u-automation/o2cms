@@ -4,7 +4,7 @@ A modern, multi-tenant headless content management system built with Next.js and
 
 ## Demo
 
-https://github.com/t4u-automation/o2cms/raw/main/assets/2026-02-11_08-29-13.mp4
+![O2 CMS Demo](assets/demo.gif)
 
 ## Features
 
