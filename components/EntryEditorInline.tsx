@@ -106,12 +106,10 @@ export default function EntryEditorInline({
         );
         setAvailableLocales(locales);
         
-        // If current locale is not in the list, use the default locale
-        if (locales.length > 0) {
+        // If current locale is not in the list, fall back to default or first available locale
+        if (locales.length > 0 && !locales.find((l) => l.code === currentLocale)) {
           const defaultLocale = locales.find((l) => l.is_default);
-          if (defaultLocale && !locales.find((l) => l.code === currentLocale)) {
-            setCurrentLocale(defaultLocale.code);
-          }
+          setCurrentLocale(defaultLocale ? defaultLocale.code : locales[0].code);
         }
       } catch (error) {
         console.error("[EntryEditorInline] Error loading locales:", error);
@@ -215,7 +213,7 @@ export default function EntryEditorInline({
         if (value === undefined || value === null) {
           // Set empty default for missing fields
           if (field.localized) {
-            normalizedFields[field.id] = { [currentLocale]: "" };
+            normalizedFields[field.id] = {};
           } else {
             normalizedFields[field.id] = "";
           }
@@ -299,7 +297,8 @@ export default function EntryEditorInline({
       // For new entries, mark as ready immediately
       initialLoadComplete.current = true;
     }
-  }, [entry, contentType, currentLocale]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry, contentType]);
 
   // Handle field value change
   const handleFieldChange = (fieldId: string, value: any, isLocalized: boolean) => {

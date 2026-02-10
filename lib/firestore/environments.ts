@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Environment } from "@/types";
+import { getEnvironmentLocales } from "./locales";
 
 /**
  * Get all environments for a project
@@ -136,6 +137,53 @@ export async function createEnvironment(
 
     await setDoc(environmentRef, environment);
     console.log("[O2] Environment created successfully:", environment.id);
+
+    // Create default locale for the new environment
+    // Copy locales from master environment, or create en-US as fallback
+    try {
+      const masterEnv = await getDefaultEnvironment(projectId, tenantId);
+      let localesToCopy: { code: string; name: string; is_default: boolean; is_optional: boolean; fallback_code?: string }[] = [];
+
+      if (masterEnv) {
+        const masterLocales = await getEnvironmentLocales(projectId, tenantId, masterEnv.id);
+        localesToCopy = masterLocales.map((l) => ({
+          code: l.code,
+          name: l.name,
+          is_default: l.is_default,
+          is_optional: l.is_optional,
+          fallback_code: l.fallback_code,
+        }));
+      }
+
+      // Fallback: create en-US if no master locales found
+      if (localesToCopy.length === 0) {
+        localesToCopy = [
+          { code: "en-US", name: "English (US)", is_default: true, is_optional: false },
+        ];
+      }
+
+      for (const localeData of localesToCopy) {
+        const localeRef = doc(collection(db, "locales"));
+        await setDoc(localeRef, {
+          id: localeRef.id,
+          project_id: projectId,
+          tenant_id: tenantId,
+          environment_id: environment.id,
+          code: localeData.code,
+          name: localeData.name,
+          is_default: localeData.is_default,
+          is_optional: localeData.is_optional,
+          ...(localeData.fallback_code ? { fallback_code: localeData.fallback_code } : {}),
+          created_at: now,
+          updated_at: now,
+        });
+      }
+      console.log(`[O2] Created ${localesToCopy.length} locale(s) for environment ${environment.id}`);
+    } catch (localeError) {
+      console.error("[O2] Error creating default locale for environment:", localeError);
+      // Don't fail environment creation if locale setup fails
+    }
+
     return environment as Environment;
   } catch (error) {
     console.error("[O2] Error creating environment:", error);

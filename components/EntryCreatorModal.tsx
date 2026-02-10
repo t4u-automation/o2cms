@@ -54,12 +54,10 @@ export default function EntryCreatorModal({
         const locales = await getEnvironmentLocales(projectId, tenantId, environmentId);
         setAvailableLocales(locales);
         
-        // If current locale is not in the list, use the default locale
-        if (locales.length > 0) {
+        // If current locale is not in the list, fall back to default or first available locale
+        if (locales.length > 0 && !locales.find((l) => l.code === currentLocale)) {
           const defaultLocale = locales.find((l) => l.is_default);
-          if (defaultLocale && !locales.find((l) => l.code === currentLocale)) {
-            setCurrentLocale(defaultLocale.code);
-          }
+          setCurrentLocale(defaultLocale ? defaultLocale.code : locales[0].code);
         }
       } catch (error) {
         console.error("[EntryCreatorModal] Error loading locales:", error);
