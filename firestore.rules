@@ -1,0 +1,500 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return request.auth.token.role;
+    }
+
+    function userTenantId() {
+      return request.auth.token.tenant_id;
+    }
+    
+    // Get user's denormalized permissions from custom claims
+    function userPermissions() {
+      return request.auth.token.permissions;
+    }
+    
+    // Helper function to check if user belongs to a specific tenant
+    function belongsToTenant(tenantId) {
+      return isAuthenticated() && userTenantId() == tenantId;
+    }
+
+    function hasTenantAdminAccess(tenantId) {
+      return belongsToTenant(tenantId) && userRole() in ["owner", "admin"];
+    }
+
+    // Helper function to check if user is tenant owner
+    function isTenantOwner(tenantId) {
+      return belongsToTenant(tenantId) && userRole() == "owner";
+    }
+    
+    // ==========================================
+    // Permission Check Helpers
+    // ==========================================
+    
+    // Check if user can perform action on entries
+    function canDoEntryAction(action) {
+      return userPermissions() != null && 
+        action in userPermissions().entry_actions;
+    }
+    
+    // Check if user can perform action on assets
+    function canDoAssetAction(action) {
+      return userPermissions() != null && 
+        action in userPermissions().asset_actions;
+    }
+    
+    // Check if user can perform action on content types
+    function canDoContentTypeAction(action) {
+      return userPermissions() != null && 
+        action in userPermissions().content_type_actions;
+    }
+    
+    // Check if user can perform action on projects
+    // Falls back to true if field doesn't exist (for tokens issued before permissions update)
+    function canDoProjectAction(action) {
+      return userPermissions() == null || 
+        !("project_actions" in userPermissions()) ||
+        action in userPermissions().project_actions;
+    }
+    
+    // Check if user can perform action on environments
+    function canDoEnvironmentAction(action) {
+      return userPermissions() == null || 
+        !("environment_actions" in userPermissions()) ||
+        action in userPermissions().environment_actions;
+    }
+    
+    // Check if user can perform action on locales
+    function canDoLocaleAction(action) {
+      return userPermissions() == null || 
+        !("locale_actions" in userPermissions()) ||
+        action in userPermissions().locale_actions;
+    }
+    
+    // Check if user can perform action on users
+    function canDoUserAction(action) {
+      return userPermissions() == null || 
+        !("user_actions" in userPermissions()) ||
+        action in userPermissions().user_actions;
+    }
+    
+    // Check if user can perform action on roles
+    function canDoRoleAction(action) {
+      return userPermissions() == null || 
+        !("role_actions" in userPermissions()) ||
+        action in userPermissions().role_actions;
+    }
+    
+    // Check if user can perform action on API keys
+    function canDoApiKeyAction(action) {
+      return userPermissions() == null || 
+        !("api_key_actions" in userPermissions()) ||
+        action in userPermissions().api_key_actions;
+    }
+    
+    // Check if user can perform action on webhooks
+    function canDoWebhookAction(action) {
+      return userPermissions() == null || 
+        !("webhook_actions" in userPermissions()) ||
+        action in userPermissions().webhook_actions;
+    }
+    
+    // Check if user has access to specific project (null = all)
+    function canAccessProject(projectId) {
+      return userPermissions() != null && (
+        userPermissions().projects == null ||
+        projectId in userPermissions().projects
+      );
+    }
+    
+    // Check if user has access to specific environment (null = all)
+    function canAccessEnvironment(environmentId) {
+      return userPermissions() != null && (
+        userPermissions().environments == null ||
+        environmentId in userPermissions().environments
+      );
+    }
+    
+    // Check if user has access to specific content type (null = all)
+    function canAccessContentType(contentTypeId) {
+      return userPermissions() != null && (
+        userPermissions().content_types == null ||
+        contentTypeId in userPermissions().content_types
+      );
+    }
+    
+    // ==========================================
+    // Invitations
+    // ==========================================
+    match /invitations/{invitationId} {
+      // Users can read invitations for their tenant
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id);
+      
+      // Only admins and owners can create invitations for their tenant
+      allow create: if isAuthenticated() && 
+        hasTenantAdminAccess(request.resource.data.tenant_id);
+      
+      // Only admins and owners can update/cancel invitations for their tenant
+      allow update, delete: if isAuthenticated() && 
+        hasTenantAdminAccess(resource.data.tenant_id);
+    }
+
+    // ==========================================
+    // Tenants
+    // ==========================================
+    match /tenants/{tenantId} {
+      // Users can read their own tenant
+      // Special case: Allow reading if user is owner (for onboarding before claim is set)
+      allow read: if isAuthenticated() && 
+        (resource.data.owner_id == request.auth.uid || belongsToTenant(tenantId));
+      
+      // Any authenticated user can create a tenant (for onboarding)
+      allow create: if isAuthenticated() && 
+        request.resource.data.owner_id == request.auth.uid;
+      
+      // Only tenant owner or admin can update or delete
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.owner_id == request.auth.uid || hasTenantAdminAccess(tenantId));
+    }
+    
+    // ==========================================
+    // Users
+    // ==========================================
+    match /users/{userId} {
+      // Users can always read their own document
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // All tenant members can read other users in their tenant (for display names, etc.)
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id);
+      
+      // Any authenticated user can create their profile (for onboarding)
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can always update their own document
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users with delete permission can delete other users
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoUserAction("delete") &&
+        request.auth.uid != userId;  // Cannot delete yourself
+    }
+    
+    // ==========================================
+    // Projects
+    // ==========================================
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoProjectAction("read");
+      
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        canDoProjectAction("create");
+      
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoProjectAction("update");
+      
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoProjectAction("delete");
+    }
+    
+    // ==========================================
+    // User Preferences
+    // ==========================================
+    match /user_preferences/{userId} {
+      // Users can read and write their own preferences
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ==========================================
+    // CMS - Content Types
+    // ==========================================
+    match /content_types/{contentTypeId} {
+      // Users can read content types from their tenant if they have permission
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoContentTypeAction("read") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id);
+      
+      // Users can create content types if they have create permission
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        request.resource.data.environment_id != null &&
+        canDoContentTypeAction("create") &&
+        canAccessProject(request.resource.data.project_id) &&
+        canAccessEnvironment(request.resource.data.environment_id);
+      
+      // Users can update content types if they have update permission
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoContentTypeAction("update") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id);
+      
+      // Users can delete content types if they have delete permission
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoContentTypeAction("delete") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id);
+    }
+    
+    // ==========================================
+    // CMS - Entries
+    // ==========================================
+    match /entries/{entryId} {
+      // Users can read entries from their tenant if they have read permission
+      // and access to the project/environment/content_type
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoEntryAction("read") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id) &&
+        canAccessContentType(resource.data.content_type_id);
+      
+      // Users can create entries if they have create permission and access
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        request.resource.data.environment_id != null &&
+        canDoEntryAction("create") &&
+        canAccessProject(request.resource.data.project_id) &&
+        canAccessEnvironment(request.resource.data.environment_id) &&
+        canAccessContentType(request.resource.data.content_type_id);
+      
+      // Users can update entries if they have update OR publish permission and access
+      // (publish requires updating the entry status)
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        (canDoEntryAction("update") || canDoEntryAction("publish") || canDoEntryAction("unpublish") || canDoEntryAction("archive")) &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id) &&
+        canAccessContentType(resource.data.content_type_id);
+      
+      // Users can delete entries if they have delete permission and access
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoEntryAction("delete") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id) &&
+        canAccessContentType(resource.data.content_type_id);
+      
+      // ==========================================
+      // Entry Snapshots (Version History)
+      // ==========================================
+      match /snapshots/{snapshotId} {
+        // Users can read snapshots if they belong to the parent entry's tenant
+        allow read: if isAuthenticated() && 
+          belongsToTenant(get(/databases/$(database)/documents/entries/$(entryId)).data.tenant_id);
+        
+        // Users can create snapshots (created during publish)
+        allow create: if isAuthenticated() && 
+          belongsToTenant(request.resource.data.tenant_id);
+        
+        // Snapshots are immutable - no updates or deletes
+        allow update, delete: if false;
+      }
+    }
+    
+    // ==========================================
+    // CMS - Assets
+    // ==========================================
+    match /assets/{assetId} {
+      // Users can read assets from their tenant if they have read permission
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoAssetAction("read") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id);
+      
+      // Users can create assets if they have create permission
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        request.resource.data.environment_id != null &&
+        canDoAssetAction("create") &&
+        canAccessProject(request.resource.data.project_id) &&
+        canAccessEnvironment(request.resource.data.environment_id);
+      
+      // Users can update assets if they have update permission
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoAssetAction("update") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id);
+      
+      // Users can delete assets if they have delete permission
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoAssetAction("delete") &&
+        canAccessProject(resource.data.project_id) &&
+        canAccessEnvironment(resource.data.environment_id);
+    }
+    
+    // ==========================================
+    // CMS - Locales
+    // ==========================================
+    match /locales/{localeId} {
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoLocaleAction("read");
+      
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        canDoLocaleAction("create");
+      
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoLocaleAction("update");
+      
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoLocaleAction("delete");
+    }
+    
+    // ==========================================
+    // CMS - Environments
+    // ==========================================
+    match /environments/{environmentId} {
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoEnvironmentAction("read");
+      
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        canDoEnvironmentAction("create");
+      
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoEnvironmentAction("update");
+      
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoEnvironmentAction("delete");
+    }
+    
+    // ==========================================
+    // Migration Jobs
+    // ==========================================
+    match /migration_jobs/{jobId} {
+      // Users can read migration jobs from their tenant
+      // This allows the frontend to display progress
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id);
+      
+      // Users can only cancel jobs (update status to 'cancelled')
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        request.resource.data.status == "cancelled" &&
+        (resource.data.status == "pending" || resource.data.status == "running");
+      
+      // Only backend (via API) can create jobs
+      allow create, delete: if false;
+    }
+    
+    // ==========================================
+    // API Keys
+    // ==========================================
+    match /api_keys/{keyId} {
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoApiKeyAction("read");
+      
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        canDoApiKeyAction("create") &&
+        request.resource.data.created_by == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoApiKeyAction("update");
+      
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoApiKeyAction("delete");
+    }
+    
+    // ==========================================
+    // Webhooks Collection
+    // ==========================================
+    match /webhooks/{webhookId} {
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoWebhookAction("read");
+      
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        canDoWebhookAction("create") &&
+        request.resource.data.created_by == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoWebhookAction("update");
+      
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoWebhookAction("delete");
+    }
+    
+    // ==========================================
+    // Scheduled Actions (for scheduled publish/unpublish)
+    // ==========================================
+    match /scheduledActions/{actionId} {
+      // Users can read scheduled actions from their tenant
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id);
+      
+      // Users can create scheduled actions for their tenant
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        request.resource.data.created_by == request.auth.uid;
+      
+      // Users can update (cancel) scheduled actions for their tenant
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id);
+      
+      // Users can delete scheduled actions for their tenant
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id);
+    }
+    
+    // ==========================================
+    // Roles (for RBAC permissions)
+    // ==========================================
+    match /roles/{roleId} {
+      // Users can read their own assigned role, or any role if they have permission
+      allow read: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        (request.auth.token.role_id == roleId || canDoRoleAction("read"));
+      
+      // Users with create permission can create custom roles
+      // System roles can only be created by owners/admins
+      allow create: if isAuthenticated() && 
+        belongsToTenant(request.resource.data.tenant_id) &&
+        (canDoRoleAction("create") || hasTenantAdminAccess(request.resource.data.tenant_id));
+      
+      // Users with update permission can update custom roles (system roles cannot be updated)
+      allow update: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        canDoRoleAction("update") &&
+        resource.data.is_system == false;
+      
+      // Users with delete permission can delete custom roles
+      // Owners can delete any roles (including system roles for cleanup)
+      allow delete: if isAuthenticated() && 
+        belongsToTenant(resource.data.tenant_id) &&
+        (canDoRoleAction("delete") || isTenantOwner(resource.data.tenant_id));
+    }
+  }
+}

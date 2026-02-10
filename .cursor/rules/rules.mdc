@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+---
+
+# O2 CMS Project Rules
+
+## Color Schema
+
+- Primary color is **black** (`#1a1a1a` / `var(--text-primary)`)
+- Use CSS variables defined in `app/globals.css` for all colors:
+  - `--text-primary`: #1a1a1a (main text, buttons, icons)
+  - `--text-secondary`: #4a4a4a (secondary text)
+  - `--text-tertiary`: #858481 (muted text, placeholders)
+  - `--background-gray-main`: #f8f8f7 (page backgrounds)
+  - `--background-menu-white`: #ffffff (cards, modals)
+  - `--border-main`: rgba(0, 0, 0, 0.08) (borders)
+  - `--Button-primary-black`: #1a1a1a (primary buttons)
+- Do NOT use blue, purple, or gradient colors for primary UI elements
+- Keep the design minimal and monochromatic (black/white/gray)
+
+## UI Components
+
+### Dropdowns
+- Always use the custom `Dropdown` component from `@/components/Dropdown`
+- Do NOT use native HTML `<select>` elements
+- The Dropdown component uses React Portals for proper rendering in modals
+
+### Loading States
+- Use the `O2Loader` component from `@/components/O2Loader` for full-page loading
+- Use `Loader2` from lucide-react with `animate-spin` for inline loading indicators
+
+### Buttons
+- Primary buttons: `bg-[var(--Button-primary-black)] text-white`
+- Secondary buttons: `border border-[var(--border-main)] bg-white`
+- Border radius: `rounded-[6px]` for buttons, `rounded-[12px]` for cards

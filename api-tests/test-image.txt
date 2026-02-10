@@ -1,0 +1,2 @@
+This is a test image file for E2E testing.
+It's actually a text file pretending to be an image.

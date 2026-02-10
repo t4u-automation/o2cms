@@ -1,0 +1,254 @@
+"use client";
+
+import { useAuth } from "@/contexts/AuthContext";
+import { LogOut, PanelLeft, Settings } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+interface HeaderProps {
+  showSettingsButton?: boolean;
+  userRole?: string | null;
+  showSidebarToggle?: boolean;
+  onSidebarToggle?: () => void;
+  isSmallScreen?: boolean;
+  hasSettingsAccess?: boolean; // For custom roles with settings-related permissions
+}
+
+// Helper function to get initials from email or display name
+function getInitials(displayName?: string | null, email?: string | null): string {
+  if (displayName && displayName.trim()) {
+    return displayName
+      .split(" ")
+      .map((name) => name[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+  if (email) {
+    return email[0].toUpperCase();
+  }
+  return "U";
+}
+
+// Helper function to generate a consistent color based on email (monochrome)
+function getAvatarColor(email?: string | null): string {
+  if (!email) return "#1a1a1a"; // default black
+  
+  // Monochrome shades from dark to light gray
+  const colors = [
+    "#1a1a1a", // black
+    "#2d2d2d", // dark gray
+    "#404040", // gray
+    "#525252", // medium gray
+    "#6b6b6b", // medium-light gray
+    "#7a7a7a", // light gray
+    "#3d3d3d", // charcoal
+    "#4f4f4f", // slate
+  ];
+  
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) {
+    hash = ((hash << 5) - hash) + email.charCodeAt(i);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  return colors[Math.abs(hash) % colors.length];
+}
+
+export default function Header({
+  showSettingsButton = false,
+  userRole = null,
+  showSidebarToggle = false,
+  onSidebarToggle,
+  isSmallScreen = false,
+  hasSettingsAccess = false,
+}: HeaderProps) {
+  
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleSignOut = async () => {
+    await logout();
+    setShowUserMenu(false);
+    router.push("/login");
+  };
+
+  const handleLogoClick = () => {
+    router.push("/projects");
+  };
+
+  const initials = getInitials(user?.displayName, user?.email);
+  const avatarColor = getAvatarColor(user?.email);
+
+  return (
+    <div
+      id="Header"
+      className="w-full pt-4 pb-4 px-8 bg-[var(--background-gray-main)] sticky top-0 z-10"
+    >
+      <div className="flex justify-between items-center w-full">
+        {/* Left Side */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Sidebar Toggle for small screens only */}
+          {isSmallScreen && showSidebarToggle && (
+            <button
+              onClick={onSidebarToggle}
+              className="flex h-8 w-8 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)] transition-colors"
+            >
+              <PanelLeft size={20} className="text-[var(--icon-secondary)]" />
+            </button>
+          )}
+
+          {/* Logo - always show on desktop, hidden on mobile when sidebar toggle is shown */}
+          {(!isSmallScreen || !showSidebarToggle) && (
+            <button
+              id="Logo"
+              onClick={handleLogoClick}
+              className="h-8 relative z-20 overflow-hidden flex gap-2 items-center cursor-pointer hover:opacity-80 transition-opacity bg-transparent border-none p-0"
+            >
+              <span className="text-2xl font-bold text-[var(--logo-color)]">
+                O2 CMS
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* Center Title on small screens only when sidebar toggle is shown */}
+        {isSmallScreen && showSidebarToggle && (
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <span className="text-xl font-bold text-[var(--logo-color)]">
+              O2 CMS
+            </span>
+          </div>
+        )}
+
+        {/* Right Side - Actions */}
+        <div id="HeaderActions" className="flex items-center gap-2">
+          {/* Settings Button - show for admin/owner OR users with settings-related permissions */}
+          {showSettingsButton && (userRole === "owner" || userRole === "admin" || hasSettingsAccess) && (
+            <button
+              onClick={() => router.push("/settings")}
+              className="flex items-center justify-center w-8 h-8 rounded-full border border-[var(--border-main)] hover:bg-[var(--fill-tsp-gray-main)] transition-colors"
+              title="Settings"
+            >
+              <Settings
+                size={16}
+                className="text-[var(--icon-primary)]"
+              />
+            </button>
+          )}
+
+          {user && (
+            <div className="relative">
+              <div
+                id="UserAvatar"
+                className="flex items-center cursor-pointer"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              >
+                <div className="relative flex items-center justify-center font-bold cursor-pointer flex-shrink-0">
+                  <div
+                    className="relative flex items-center justify-center font-bold flex-shrink-0 rounded-full overflow-hidden"
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      backgroundColor: user.photoURL ? "transparent" : avatarColor,
+                    }}
+                  >
+                    {user.photoURL ? (
+                      <Image
+                        className="w-full h-full object-cover"
+                        src={user.photoURL}
+                        alt={user.displayName || "User"}
+                        width={32}
+                        height={32}
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="text-white text-sm font-bold">
+                        {initials}
+                      </span>
+                    )}
+                  </div>
+                  <Image
+                    className="absolute bottom-[-2px] right-[-2px] w-[12px] h-[12px]"
+                    alt="membership"
+                    src="https://files.manuscdn.com/webapp/_next/static/media/BasicMembershipIcon.3f518a85.svg"
+                    width={12}
+                    height={12}
+                    unoptimized
+                  />
+                </div>
+              </div>
+
+              {/* User Menu Dropdown */}
+              {showUserMenu && (
+                <>
+                  <div
+                    id="UserMenu"
+                    className="absolute top-12 right-0 w-[280px] bg-white rounded-[16px] shadow-[0px_8px_24px_0px_rgba(0,0,0,0.12)] border border-[var(--border-main)] p-4 flex flex-col gap-3 z-50"
+                  >
+                    {/* User Info */}
+                    <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-main)]">
+                      <div
+                        className="relative flex items-center justify-center flex-shrink-0 rounded-full overflow-hidden"
+                        style={{
+                          width: "48px",
+                          height: "48px",
+                          backgroundColor: user.photoURL ? "transparent" : avatarColor,
+                        }}
+                      >
+                        {user.photoURL ? (
+                          <Image
+                            className="w-full h-full object-cover"
+                            src={user.photoURL}
+                            alt={user.displayName || "User"}
+                            width={48}
+                            height={48}
+                            unoptimized
+                          />
+                        ) : (
+                          <span className="text-white text-xl font-bold">
+                            {initials}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-[var(--text-primary)] font-semibold text-base truncate">
+                          {user.displayName || user.email}
+                        </span>
+                        <span className="text-[var(--text-tertiary)] text-sm truncate">
+                          {user.email}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Sign Out Button */}
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center gap-3 w-full px-3 py-2 rounded-[8px] hover:bg-[var(--fill-tsp-white-main)] transition-colors text-left"
+                    >
+                      <LogOut
+                        size={18}
+                        className="text-[var(--function-error)]"
+                      />
+                      <span className="text-[var(--function-error)] text-sm font-medium">
+                        Sign out
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

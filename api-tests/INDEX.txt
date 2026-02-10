@@ -1,0 +1,186 @@
+═══════════════════════════════════════════════════════════════════════════
+                    O2 CMS API - Test Suite Index
+═══════════════════════════════════════════════════════════════════════════
+
+📁 SCRIPT FILES
+═══════════════════════════════════════════════════════════════════════════
+
+get-test-credentials.sh (2.9 KB)
+└─ Purpose: Helper to find API keys and Space IDs
+└─ Run: ./get-test-credentials.sh
+└─ Shows: Where to find credentials in CMS UI
+
+test-environments-api.sh (7.4 KB)
+└─ Purpose: Full CRUD test suite for Environments API
+└─ Run: ./test-environments-api.sh <API_KEY> <SPACE_ID>
+└─ Tests: 8 comprehensive test cases
+└─ Includes: Error cases (401, 404, 400)
+
+run-all-tests.sh (1.1 KB)
+└─ Purpose: Master test orchestrator
+└─ Run: ./run-all-tests.sh <API_KEY> <SPACE_ID>
+└─ Orchestrates: All test suites
+└─ Future: Will run tests for all APIs
+
+test-manual-curl.sh (2.9 KB)
+└─ Purpose: Shows manual cURL testing examples
+└─ Run: ./test-manual-curl.sh <API_KEY> <SPACE_ID>
+└─ Provides: Copy-paste ready commands
+
+TESTING.sh (0.5 KB)
+└─ Purpose: Quick reference guide
+└─ Run: ./TESTING.sh or cat TESTING.sh
+└─ Shows: Available test scripts and usage
+
+
+═══════════════════════════════════════════════════════════════════════════
+                         QUICK START GUIDE
+═══════════════════════════════════════════════════════════════════════════
+
+1. GET CREDENTIALS
+   ./get-test-credentials.sh
+   (Follow the instructions to get your API_KEY and SPACE_ID)
+
+2. TEST ENVIRONMENTS API
+   ./test-environments-api.sh <YOUR_API_KEY> <YOUR_SPACE_ID>
+
+3. VIEW MANUAL EXAMPLES
+   ./test-manual-curl.sh <YOUR_API_KEY> <YOUR_SPACE_ID>
+
+4. RUN ALL TESTS
+   ./run-all-tests.sh <YOUR_API_KEY> <YOUR_SPACE_ID>
+
+
+═══════════════════════════════════════════════════════════════════════════
+                      CURRENT IMPLEMENTATION STATUS
+═══════════════════════════════════════════════════════════════════════════
+
+✅ Phase 2.1: Environments API (COMPLETE)
+   ├─ GET /v1/spaces/:space_id/environments
+   ├─ POST /v1/spaces/:space_id/environments
+   ├─ GET /v1/spaces/:space_id/environments/:environment_id
+   ├─ PUT /v1/spaces/:space_id/environments/:environment_id
+   └─ DELETE /v1/spaces/:space_id/environments/:environment_id
+
+⏳ Phase 2.2: Content Types API (NEXT)
+⏳ Phase 2.3: Entries API (AFTER 2.2)
+⏳ Phase 2.4: Assets API (AFTER 2.3)
+⏳ Phase 2.5: Locales API (AFTER 2.4)
+
+
+═══════════════════════════════════════════════════════════════════════════
+                       API ENDPOINT EXAMPLES
+═══════════════════════════════════════════════════════════════════════════
+
+Base URL: https://us-central1-t4u-cms.cloudfunctions.net/api
+
+List Environments:
+  GET /v1/spaces/:space_id/environments
+
+Create Environment:
+  POST /v1/spaces/:space_id/environments
+  Body: {"name": "staging", "description": "Staging env"}
+
+Get Environment:
+  GET /v1/spaces/:space_id/environments/:environment_id
+
+Update Environment:
+  PUT /v1/spaces/:space_id/environments/:environment_id
+  Body: {"name": "staging", "description": "Updated"}
+
+Delete Environment:
+  DELETE /v1/spaces/:space_id/environments/:environment_id
+
+
+═══════════════════════════════════════════════════════════════════════════
+                        AUTHENTICATION
+═══════════════════════════════════════════════════════════════════════════
+
+All requests require Bearer token authentication:
+
+Authorization: Bearer o2_cma_your_key_here
+
+Format: o2_[type]_[hash]
+  - type: cma (Content Management API), cda, cpa
+  - hash: Random alphanumeric string
+
+Get API key from CMS Settings > API Keys tab
+
+
+═══════════════════════════════════════════════════════════════════════════
+                     ERROR CODES & MEANINGS
+═══════════════════════════════════════════════════════════════════════════
+
+200 OK
+  ├─ GET request successful
+  └─ PUT request successful
+
+201 Created
+  └─ POST request successful, resource created
+
+204 No Content
+  └─ DELETE request successful
+
+400 Bad Request
+  ├─ Missing required fields
+  └─ Validation error
+
+401 Unauthorized
+  ├─ Missing or invalid API key
+  └─ API key expired or revoked
+
+403 Forbidden
+  ├─ API key doesn't have permission
+  └─ Cannot access this project
+
+404 Not Found
+  ├─ Environment not found
+  └─ Space/project not found
+
+
+═══════════════════════════════════════════════════════════════════════════
+                         SECURITY NOTES
+═══════════════════════════════════════════════════════════════════════════
+
+✓ Never commit API keys to Git
+✓ Treat API keys like passwords
+✓ Rotate keys periodically
+✓ Use separate keys for different environments (dev/prod)
+✓ Restrict keys to specific projects if needed
+✓ Revoke keys immediately if compromised
+✓ All requests must use HTTPS
+✓ Bearer tokens are hashed in storage
+
+
+═══════════════════════════════════════════════════════════════════════════
+                          TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════
+
+Error: "Invalid API key format"
+  → API key must start with 'o2_'
+  → Check you copied the full key (including prefix)
+
+Error: "API key not found"
+  → Key may have expired
+  → Key may have been revoked
+  → Check CMS Settings > API Keys
+
+Error: "Access denied to project"
+  → API key may be restricted to other projects
+  → Create new unrestricted key or add project access
+
+Error: "Cannot rename 'main' environment"
+  → 'main' is the default environment
+  → Cannot be modified
+  → Create a new environment instead
+
+Error: "Cannot delete 'main' environment"
+  → 'main' is the default environment
+  → Cannot be deleted
+  → At least one environment must exist
+
+
+═══════════════════════════════════════════════════════════════════════════
+
+For more information, see the test scripts themselves or contact support.
+

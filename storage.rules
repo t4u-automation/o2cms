@@ -1,0 +1,67 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userTenantId() {
+      return request.auth.token.tenant_id;
+    }
+    
+    // Helper function to check if user belongs to a specific tenant
+    function belongsToTenant(tenantId) {
+      return isAuthenticated() && userTenantId() == tenantId;
+    }
+    
+    // Helper function to check allowed content types
+    function isAllowedContentType() {
+      let contentType = request.resource.contentType;
+      return contentType.matches('image/.*') ||
+             contentType.matches('video/.*') ||
+             contentType.matches('audio/.*') ||
+             contentType.matches('application/pdf') ||
+             contentType.matches('application/json') ||
+             contentType.matches('text/.*') ||
+             // Microsoft Office documents
+             contentType.matches('application/vnd.ms-excel') ||
+             contentType.matches('application/vnd.openxmlformats-officedocument.*') ||
+             contentType.matches('application/msword') ||
+             contentType.matches('application/vnd.ms-powerpoint') ||
+             // OpenDocument formats
+             contentType.matches('application/vnd.oasis.opendocument.*') ||
+             // Archives
+             contentType.matches('application/zip') ||
+             contentType.matches('application/x-zip-compressed') ||
+             contentType.matches('application/gzip') ||
+             // Other common types
+             contentType.matches('application/xml') ||
+             contentType.matches('application/octet-stream');
+    }
+
+    // ==========================================
+    // CMS Assets Storage
+    // ==========================================
+    // Path: tenants/{tenantId}/projects/{projectId}/environments/{environmentId}/assets/{assetId}/{locale}/{filename}
+    match /tenants/{tenantId}/projects/{projectId}/environments/{environmentId}/assets/{assetId}/{locale}/{filename} {
+      // Users can read assets from their tenant's projects
+      allow read: if isAuthenticated() && belongsToTenant(tenantId);
+      
+      // Users can upload assets to their tenant's projects
+      allow create: if isAuthenticated() && 
+        belongsToTenant(tenantId) &&
+        // File size limit: 50MB
+        request.resource.size < 50 * 1024 * 1024 &&
+        // Check allowed content types
+        isAllowedContentType();
+      
+      // Users can update assets in their tenant
+      allow update: if isAuthenticated() && belongsToTenant(tenantId);
+      
+      // Users can delete assets from their tenant
+      allow delete: if isAuthenticated() && belongsToTenant(tenantId);
+    }
+  }
+}

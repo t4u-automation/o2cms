@@ -1,0 +1,56 @@
+{
+  "name": "o2cms",
+  "version": "0.1.0",
+  "description": "O2 CMS - A multi-tenant content management system with authentication and project management",
+  "keywords": [
+    "cms",
+    "nextjs",
+    "firebase",
+    "typescript",
+    "multi-tenant",
+    "authentication"
+  ],
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "deploy:firebase": "firebase deploy --only firestore,functions",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:firestore": "firebase deploy --only firestore"
+  },
+  "dependencies": {
+    "@tiptap/extension-link": "^3.10.8",
+    "@tiptap/extension-subscript": "^3.10.8",
+    "@tiptap/extension-superscript": "^3.10.8",
+    "@tiptap/extension-table": "^3.10.8",
+    "@tiptap/extension-table-cell": "^3.10.8",
+    "@tiptap/extension-table-header": "^3.10.8",
+    "@tiptap/extension-table-row": "^3.10.8",
+    "@tiptap/extension-text-align": "^3.10.8",
+    "@tiptap/extension-underline": "^3.10.8",
+    "@tiptap/react": "^3.10.8",
+    "@tiptap/starter-kit": "^3.10.8",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.3.0",
+    "lucide-react": "^0.545.0",
+    "next": "16.0.7",
+    "react": "19.1.0",
+    "react-day-picker": "^9.13.0",
+    "react-dom": "19.1.0",
+    "typesense": "^2.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.7",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "typescript": "^5"
+  }
+}

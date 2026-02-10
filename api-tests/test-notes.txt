@@ -1,0 +1,13 @@
+E2E Test Notes
+==============
+
+This is a simple text file used for testing asset uploads in the O2 CMS.
+
+Features to test:
+- Asset creation
+- Asset metadata (title, description)
+- Multi-locale support
+- Publishing workflow
+- Archiving workflow
+- File processing
+

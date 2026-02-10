@@ -1,0 +1,10 @@
+This is a sample text file for asset upload testing.
+It contains multiple lines of text content.
+
+Test data:
+- Line 1: Hello World
+- Line 2: Lorem ipsum dolor sit amet
+- Line 3: Asset management testing
+
+End of test file.
+
